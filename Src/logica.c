@@ -181,8 +181,8 @@ void MAIN_LOOP(void){
 			last_valid_raspi = HAL_GetTick();
 		}
 
-
 		flag_raspi = 0;
+
 	}
 
 	// Polling
