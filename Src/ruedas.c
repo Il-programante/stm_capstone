@@ -174,6 +174,8 @@ void Control_Heading(float heading, float dt){
 
 	float w_heading = PID(&PID_CFG_H, &PID_STATE_H, err, dt) * H_OUT;
 
+	if (heading_block == 1){ w_heading = 0.0f; }
+
 	float ref = vel_ref - w_heading;
 	ref = Ref_Ramp(dt, ref, motors[MOT_L].vel_ref);
 	if (ref > RPS_MAX) ref = RPS_MAX;
@@ -224,8 +226,6 @@ void SET_VelRef(float metros_segundo){
 }
 
 void SET_HeadingRef(float heading){
-
-	if (heading_block == 1) return;
 
 	heading_ref = heading;
 

@@ -44,16 +44,14 @@ volatile uint8_t flag_raspi = 0;
 
 void START_Mov(float metros_segundo){
 
-	UNBLOCK_Heading();
 	START_Tracking();
+	UNBLOCK_Heading();
 	SET_VelRef(metros_segundo);
 
 }
 
 void STOP_Mov(){
 
-	STOP_Tracking();
-	SET_HeadingRef(heading);
 	BLOCK_Heading();
 	SET_VelRef(0);
 
@@ -87,7 +85,7 @@ void LOGICA_RECEP(void){
     	// Ordenes Basicas
         case 0: SET_VelRef(cmd.valor); break;
         case 1: SET_HeadingRef(cmd.valor); break;
-        case 2: RESET_Tracking(); break;
+        case 2: RESET_Tracking(); SET_HeadingRef(0); break;
         case 3: START_Tracking(); break;
         case 4: STOP_Tracking(); break;
         case 5: MOVE_Stepper((int32_t)(cmd.valor*10)); break;
