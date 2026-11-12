@@ -25,20 +25,36 @@
 #define COUNT_CONT_M   10
 #define COUNT_V        1000
 
+#define N_TASKS        5
+
 // Variables Globales
 volatile float heading = 0;
 volatile float screw_mm = 0;
 volatile uint8_t sub_voltaje = 0;
 volatile uint32_t last_valid_raspi = 0;
-
-// Flags
-volatile uint8_t flag_read_h = 0;
-volatile uint8_t flag_read_m = 0;
-volatile uint8_t flag_cont_h = 0;
-volatile uint8_t flag_cont_m = 0;
-volatile uint8_t flag_v = 0;
-
 volatile uint8_t flag_raspi = 0;
+
+// Tasks
+typedef struct {
+    uint16_t period;
+    uint16_t counter;
+    volatile uint8_t flag;
+    void (*task)(float);
+} Task_t;
+
+static void task_read_h(float dt){ heading = MPU6500_ReadGyroZ(dt); }
+static void task_read_m(float dt){ LEER_MOTORES(dt); }
+static void task_cont_h(float dt){ Control_Heading(heading, dt); }
+static void task_cont_m(float dt){ Control_Ruedas(dt); }
+static void task_v(float dt)     { (void)dt; sub_voltaje = REVISAR_VOLTAJE(); }
+
+static Task_t tasks[] = {
+    { COUNT_READ_H, 0, 0, task_read_h },
+    { COUNT_READ_M, 0, 0, task_read_m },
+    { COUNT_CONT_H, 0, 0, task_cont_h },
+    { COUNT_CONT_M, 0, 0, task_cont_m },
+    { COUNT_V,      0, 0, task_v      },
+};
 
 // Ordenes
 
@@ -132,44 +148,12 @@ void MAIN_LOOP(void){
 
 	}
 
-	if (flag_read_h){
+	for (uint8_t i = 0; i < N_TASKS; i++){
 
-		flag_read_h = 0;
-
-	    heading = MPU6500_ReadGyroZ(0.001f * COUNT_READ_H);
-
-	}
-
-	if (flag_read_m){
-
-		flag_read_m = 0;
-
-		LEER_MOTORES(0.001f * COUNT_READ_M);
-
-	}
-
-	if (flag_cont_h){
-
-		flag_cont_h = 0;
-
-		Control_Heading(heading, 0.001f * COUNT_CONT_H);
-
-	}
-
-	if (flag_cont_m){
-
-		flag_cont_m = 0;
-
-		Control_Ruedas(0.001f * COUNT_CONT_M);
-
-	}
-
-	if (flag_v){
-
-		flag_v = 0;
-
-		sub_voltaje = REVISAR_VOLTAJE();
-
+	    if (tasks[i].flag){
+	        tasks[i].flag = 0;
+	        tasks[i].task(tasks[i].period * 0.001f);
+	    }
 	}
 
 	if (flag_raspi != 0){
@@ -196,47 +180,13 @@ void MAIN_LOOP(void){
 
 void HAL_SYSTICK_Callback(void)
 {
-	static uint8_t counter_read_h = 0;
-	static uint8_t counter_read_m = 0;
-	static uint8_t counter_cont_h = 0;
-	static uint8_t counter_cont_m = 0;
-	static uint16_t counter_v = 0;
 
-	counter_read_h++;
-	if (counter_read_h >= COUNT_READ_H){
-
-		counter_read_h = 0;
-		flag_read_h = 1;
+	for (uint8_t i = 0; i < N_TASKS; i++){
+		if (++tasks[i].counter >= tasks[i].period){
+			tasks[i].counter = 0;
+	        tasks[i].flag = 1;
+	    }
 	}
-
-	counter_read_m++;
-	if (counter_read_m >= COUNT_READ_M){
-
-		counter_read_m = 0;
-		flag_read_m = 1;
-	}
-
-	counter_cont_h++;
-	if (counter_cont_h >= COUNT_CONT_H){
-
-		counter_cont_h = 0;
-		flag_cont_h = 1;
-	}
-
-	counter_cont_m++;
-	if (counter_cont_m >= COUNT_CONT_M){
-
-		counter_cont_m = 0;
-		flag_cont_m = 1;
-	}
-
-	counter_v++;
-	if (counter_v >= COUNT_V){
-
-		counter_v = 0;
-		flag_v = 1;
-	}
-
 }
 
 
